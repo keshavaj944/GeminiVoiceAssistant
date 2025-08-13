@@ -2,6 +2,7 @@ package com.example.geminivoiceassistant // Make sure this matches your package 
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -19,6 +20,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.textfield.TextInputEditText
 import io.noties.markwon.Markwon
 import kotlinx.coroutines.launch
 
@@ -32,16 +34,34 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadingIndicator: ProgressBar
     private lateinit var fabIncreaseFont: FloatingActionButton
     private lateinit var fabDecreaseFont: FloatingActionButton
+    private lateinit var globalInstructionsEditText: TextInputEditText
+    private lateinit var additionalInstructionsEditText: TextInputEditText
 
     // State variable for font size
-    private var currentFontSize = 18f
+    private var currentFontSize = 14f
+
+    // SharedPreferences for saving global instructions
+    private val sharedPreferences by lazy {
+        getSharedPreferences("GeminiAppSettings", Context.MODE_PRIVATE)
+    }
 
     private val speechResultLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK && result.data != null) {
                 val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 if (!spokenText.isNullOrEmpty()) {
-                    viewModel.getResponseStream(spokenText[0])
+                    // Get instructions from text boxes
+                    val globalInstructions = globalInstructionsEditText.text.toString()
+                    val additionalInstructions = additionalInstructionsEditText.text.toString()
+
+                    // Save the global instructions for next time
+                    sharedPreferences.edit().putString("global_instructions", globalInstructions).apply()
+
+                    // Call the ViewModel with all the information
+                    viewModel.getResponseStream(globalInstructions, additionalInstructions, spokenText[0])
+
+                    // Clear the one-time instruction box after use
+                    additionalInstructionsEditText.text?.clear()
                 }
             }
         }
@@ -59,21 +79,29 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialize UI views
+        window.decorView.setBackgroundColor(getColor(R.color.app_background_color))
+
+        // Initialize all UI views
+        initializeViews()
+        loadSavedInstructions()
+        observeUiState()
+        setupClickListeners()
+    }
+
+    private fun initializeViews() {
         responseText = findViewById(R.id.responseText)
         micButton = findViewById(R.id.micButton)
         loadingIndicator = findViewById(R.id.loadingIndicator)
         fabIncreaseFont = findViewById(R.id.fabIncreaseFont)
         fabDecreaseFont = findViewById(R.id.fabDecreaseFont)
-
-        // Set initial font size
+        globalInstructionsEditText = findViewById(R.id.globalInstructionsEditText)
+        additionalInstructionsEditText = findViewById(R.id.additionalInstructionsEditText)
         responseText.textSize = currentFontSize
+    }
 
-        // Start observing UI state changes from the ViewModel
-        observeUiState()
-
-        // Set up click listeners for all buttons
-        setupClickListeners()
+    private fun loadSavedInstructions() {
+        val savedInstructions = sharedPreferences.getString("global_instructions", "")
+        globalInstructionsEditText.setText(savedInstructions)
     }
 
     private fun setupClickListeners() {
@@ -87,7 +115,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         fabDecreaseFont.setOnClickListener {
-            if (currentFontSize > 12f) { // Set a minimum font size
+            if (currentFontSize > 10f) { // Set a minimum font size
                 currentFontSize -= 2f
                 responseText.textSize = currentFontSize
             }
@@ -95,20 +123,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeUiState() {
-        // Create a single instance of Markwon to be reused
         val markwon = Markwon.create(this@MainActivity)
-
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    // Use Markwon to render Markdown text
                     markwon.setMarkdown(responseText, state.displayedText)
-
                     loadingIndicator.visibility = if (state.isLoading) View.VISIBLE else View.GONE
                     micButton.isEnabled = !state.isLoading
                     fabIncreaseFont.isEnabled = !state.isLoading
                     fabDecreaseFont.isEnabled = !state.isLoading
-
                     state.error?.let {
                         Toast.makeText(this@MainActivity, it, Toast.LENGTH_LONG).show()
                     }

@@ -25,13 +25,24 @@ class MainViewModel : ViewModel() {
         apiKey = BuildConfig.GEMINI_API_KEY
     )
 
-    fun getResponseStream(prompt: String) {
+    fun getResponseStream(globalInstructions: String, additionalInstructions: String, prompt: String) {
         _uiState.update { it.copy(isLoading = true, displayedText = "") }
+
+        // Combine all instructions into a single, structured prompt
+        val finalPrompt = buildString {
+            if (globalInstructions.isNotBlank()) {
+                append("Global Instruction: $globalInstructions\n\n")
+            }
+            if (additionalInstructions.isNotBlank()) {
+                append("Additional Instruction for this query: $additionalInstructions\n\n")
+            }
+            append("User's question: $prompt")
+        }
 
         viewModelScope.launch {
             try {
                 var currentText = ""
-                generativeModel.generateContentStream(prompt).collect { chunk ->
+                generativeModel.generateContentStream(finalPrompt).collect { chunk ->
                     currentText += chunk.text
                     _uiState.update {
                         it.copy(displayedText = currentText)
