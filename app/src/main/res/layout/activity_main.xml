@@ -14,12 +14,13 @@
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="1dp"
-        android:layout_marginBottom="1dp"
-        android:hint="Global Instructions (e.g., Act as a poet)"
+        android:hint="Global Instructions (e.g., Act as a senior developer)"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        app:endIconMode="custom"
+        app:endIconDrawable="@drawable/ic_folder_open"
+        app:endIconContentDescription="Open file">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/globalInstructionsEditText"
             android:layout_width="match_parent"

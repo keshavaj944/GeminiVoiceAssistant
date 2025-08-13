@@ -21,7 +21,10 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // isMinifyEnabled shrinks your code by removing unused classes and members
+            isMinifyEnabled = true
+            // isShrinkResources removes unused resources (like images you aren't using)
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
