@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Gemini Voice Assistant</string>
+    <string name="press_the_mic_and_ask_a_question">Press the mic and ask a question...</string>
+    <string name="start_listening">Start Listening</string>
+</resources>
